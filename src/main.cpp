@@ -70,21 +70,29 @@ struct static_vector_add<static_vector<0>, static_vector<0>>
 	using type = static_vector<0>;
 };
 
-template<typename>
+template <typename>
 struct static_vector_negate;
 
-template<int E1H, int... E1T>
+template <int E1H, int... E1T>
 struct static_vector_negate<static_vector<E1H, E1T...>>
 {
 	using type = typename static_vector_cat<static_vector<-E1H>, typename static_vector_negate<static_vector<E1T...>>::type>::type;
 };
 
-template<>
+template <>
 struct static_vector_negate<static_vector<0>>
 {
 	using type = static_vector<0>;
 };
 
+template <typename, typename>
+struct static_vector_subtract;
+
+template <int E1H, int... E1T, int E2H, int... E2T>
+struct static_vector_subtract<static_vector<E1H, E1T...>, static_vector<E2H, E2T...>>
+{
+	using type = typename static_vector_add<static_vector<E1H, E1T...>, typename static_vector_negate<static_vector<E2H, E2T...>>::type>::type;
+};
 
 template <typename, size_t Capacity, int Index>
 struct static_vector_create
@@ -95,6 +103,12 @@ template <int Index, size_t Capacity>
 struct static_vector_create<static_vector<>, Capacity, Index>
 {
 	using type = typename static_vector_create<push_back<static_vector<>, 0>::type, Capacity - 1, Index - 1>::type;
+};
+
+template <size_t Capacity>
+struct static_vector_create<static_vector<>, Capacity, 0>
+{
+	using type = typename static_vector_create<push_back<static_vector<>, 1>::type, Capacity - 1, - 1>::type;
 };
 
 template <int Index, size_t Capacity, int Head, int... Tail>
@@ -114,11 +128,20 @@ struct static_vector_create<static_vector<Head, Tail...>, 0, Index>
 {
 	using type = static_vector<Head, Tail...>;
 };
+
 template <typename TEnum, typename TPowers>
-struct unit;
+struct unit
+{
+	typedef TEnum type;
+	using vector = TPowers;
+};
 
 template <typename TEnum, TEnum Index>
 using basic_unit = unit<TEnum, typename static_vector_create<static_vector<>, (int)TEnum::_count, (int)Index>::type>;
+
+template <typename TDividendUnit, typename TDivisorUnit>
+using divided_unit = unit<typename TDividendUnit::type,
+typename static_vector_subtract<typename TDividendUnit::vector, typename TDivisorUnit::vector>::type>;
 
 enum class si_units
 {
@@ -135,23 +158,20 @@ enum class si_units
 int main()
 {
 	using second = basic_unit<si_units, si_units::second>;
+	using metre = basic_unit<si_units, si_units::metre>;
+
 	using v = static_vector<4, 3, 2, 1, 0>;
 	using v2 = static_vector<4, 4, 2, 1, 0>;
-	using v3 = push_back<v2, 9>::type;
-	using v4 = static_vector<at<v, 0>::value + at<v, 0>::value>;
-	// std::cout << at<v, 0>::value << std::endl;
-	using v7 = typename static_vector_create<static_vector<>, 3, 1>::type;
-	std::cout << at<v7, 0>::value << " ";
-	std::cout << at<v7, 1>::value << " ";
-	std::cout << at<v7, 2>::value << " ";
+	using v3 = typename static_vector_subtract<v, v2>::type;
+	using v4 = divided_unit<metre, second>;
+	
+	std::cout << at<v3, 0>::value << std::endl;
+	std::cout << at<v3, 1>::value << std::endl;
+	std::cout << at<v3, 2>::value << std::endl;
+	std::cout << at<v3, 3>::value << std::endl;
+	std::cout << at<v3, 4>::value << std::endl;
 
-	using v5 = typename static_vector_add<v, v2>::type;
-	using v6 = static_vector<0>;
-	// std::cout << at<v6, 0>::value << "v6" << std::endl;
+	using v7 = typename static_vector_create<static_vector<>, 3, 0>::type;
 
-	// std::cout << at<v5, 0>::value << std::endl;
-	// std::cout << at<v5, 1>::value << std::endl;
-	// std::cout << at<v5, 2>::value << std::endl;
-	// std::cout << at<v5, 3>::value << std::endl;
-	// std::cout << at<v5, 4>::value << std::endl;
-}
+	std::cout << at<v7, 0>::value << std::endl;
+};
