@@ -70,6 +70,22 @@ struct static_vector_add<static_vector<0>, static_vector<0>>
 	using type = static_vector<0>;
 };
 
+template<typename>
+struct static_vector_negate;
+
+template<int E1H, int... E1T>
+struct static_vector_negate<static_vector<E1H, E1T...>>
+{
+	using type = typename static_vector_cat<static_vector<-E1H>, typename static_vector_negate<static_vector<E1T...>>::type>::type;
+};
+
+template<>
+struct static_vector_negate<static_vector<0>>
+{
+	using type = static_vector<0>;
+};
+
+
 template <typename, size_t Capacity, int Index>
 struct static_vector_create
 {
@@ -128,8 +144,6 @@ int main()
 	std::cout << at<v7, 0>::value << " ";
 	std::cout << at<v7, 1>::value << " ";
 	std::cout << at<v7, 2>::value << " ";
-
-	std::cout << second << std::endl;
 
 	using v5 = typename static_vector_add<v, v2>::type;
 	using v6 = static_vector<0>;
