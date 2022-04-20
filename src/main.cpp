@@ -76,29 +76,6 @@ struct static_vector_add<static_vector<0>, static_vector<0>>
 	using type = static_vector<0>;
 };
 
-template <int E1H, int... E1T, int E2H, int... E2T>
-struct static_vector_add<static_vector<E1H, E1T...>, static_vector<E2H, E2T...>>
-{
-	using type = typename static_vector_cat<static_vector<E1H + E2H>, typename static_vector_add<static_vector<E1T...>, static_vector<E2T...>>::type>::type;
-};
-
-template <int... E2>
-struct static_vector_add<static_vector<0>, static_vector<E2...>>
-{
-	using type = static_vector<E2...>;
-};
-
-template <int... E1>
-struct static_vector_add<static_vector<E1...>, static_vector<0>>
-{
-	using type = static_vector<E1...>;
-};
-
-template <>
-struct static_vector_add<static_vector<0>, static_vector<0>>
-{
-	using type = static_vector<0>;
-};
 /////////////////////////// STATIC ADD MULTIPLE ///////////////////////////
 
 template <typename... Vector>
@@ -107,7 +84,7 @@ struct static_vector_add_multiple;
 template <int... E1, int... E2, typename... Vector>
 struct static_vector_add_multiple<static_vector<E1...>, static_vector<E2...>, Vector...>
 {
-	using type = static_vector_add_multiple<typename static_vector_add<static_vector<E1...>, static_vector<E2...>>::type, Vector...>::type;
+	using type = typename static_vector_add_multiple<typename static_vector_add<static_vector<E1...>, static_vector<E2...>>::type, Vector...>::type;
 };
 
 template <int... E1, int... E2>
@@ -199,6 +176,9 @@ template <typename TDividendUnit, typename TDivisorUnit>
 using divided_unit = unit<typename TDividendUnit::type,
 						  typename static_vector_subtract<typename TDividendUnit::vector, typename TDivisorUnit::vector>::type>;
 
+/////////////////////////// MULTIPLIED UNIT ///////////////////////////
+template <typename TFirstUnit, typename... TOtherUnits>
+using multiplied_unit = unit<typename TFirstUnit::type, typename static_vector_add_multiple<typename TFirstUnit::vector, typename TOtherUnits::vector...>::type>;
 
 /////////////////////////// ARE SAME ///////////////////////////
 
@@ -207,7 +187,30 @@ struct are_same : std::conjunction<std::is_same<U1, Us>...>
 {
 };
 
+/////////////////////////// QUANTITY ///////////////////////////
 
+template <typename TUnit, typename TValue = double>
+struct quantity
+{
+private:
+	TValue value_;
+public:
+	using unit = TUnit;
+	quantity(double _v) : value_(_v) {};
+	TValue value() {return value_;};
+
+	template <typename TUnit2>
+	auto operator+(quantity<TUnit2> q) { return quantity<unit>((*this).value_ + q.value());};
+
+	template <typename TUnit2>
+	auto operator-(quantity<TUnit2> q) { return quantity<unit>((*this).value_ - q.value());};
+
+	template <typename TUnit2>
+	auto operator/(quantity<TUnit2> q) { return quantity<unit>((*this).value_ / q.value());};
+
+	template <typename TUnit2>
+	auto operator*(quantity<TUnit2> q) { return quantity<unit>((*this).value_ * q.value());};
+};
 
 enum class si_units
 {
@@ -221,23 +224,48 @@ enum class si_units
 	_count
 };
 
+
+using second = basic_unit<si_units, si_units::second>;
+using metre = basic_unit<si_units, si_units::metre>;
+using kilogram = basic_unit<si_units, si_units::kilogram>;
+
+using metre_per_second = divided_unit<metre, second>;
+using newton = divided_unit<multiplied_unit<kilogram, metre>, multiplied_unit<second, second>>;
+
 int main()
 {
-	using second = basic_unit<si_units, si_units::second>;
-	using metre = basic_unit<si_units, si_units::metre>;
+	quantity<metre> l(2.1);
+    quantity<second> t(0.9);
+    auto v1(l / t);
 
-	using v = static_vector<4, 3, 2, 1, 0>;
-	using v2 = static_vector<4, 4, 2, 1, 0>;
-	using v3 = typename static_vector_subtract<v, v2>::type;
-	using v4 = divided_unit<metre, second>;
+    quantity<metre_per_second> v2{ 2.5 };
 
-	std::cout << at<v3, 0>::value << std::endl;
-	std::cout << at<v3, 1>::value << std::endl;
-	std::cout << at<v3, 2>::value << std::endl;
-	std::cout << at<v3, 3>::value << std::endl;
-	std::cout << at<v3, 4>::value << std::endl;
+    std::cout << (v1 + v2).value() << std::endl;
 
-	using v7 = typename static_vector_create<static_vector<>, 3, 0>::type;
+    // Won't compile
+    //std::cout << (l + t).value() << std::endl;
 
-	std::cout << at<v7, 0>::value << std::endl;
+	// using second = basic_unit<si_units, si_units::second>;
+	// using metre = basic_unit<si_units, si_units::metre>;
+
+	// using v = static_vector<4, 3, 2, 1, 0>;
+	// using v2 = static_vector<4, 4, 2, 1, 0>;
+	// using v3 = typename static_vector_subtract<v, v2>::type;
+	// using v4 = divided_unit<metre, second>;
+	// using u2 = multiplied_unit<metre, metre>;
+
+	// quantity<metre> q1(1);
+	// quantity<metre> q2(2);
+	// auto q3(q1 + q2);
+
+	// std::cout << q3.value() << std::endl;
+	// std::cout << at<v3, 0>::value << std::endl;
+	// std::cout << at<v3, 1>::value << std::endl;
+	// std::cout << at<v3, 2>::value << std::endl;
+	// std::cout << at<v3, 3>::value << std::endl;
+	// std::cout << at<v3, 4>::value << std::endl;
+
+	// using v7 = typename static_vector_create<static_vector<>, 3, 0>::type;
+
+	// std::cout << at<v7, 0>::value << std::endl;
 };
